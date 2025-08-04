@@ -17,19 +17,39 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedLocation, setSelectedLocation] = useState("all")
   const [quickRegisterMode, setQuickRegisterMode] = useState(false)
+  const [items, setItems] = useState([]) // ← 追加
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
       router.replace("/login")
+      return
     }
-  }, [router])
 
-  if (isLoading) {
-    return null
-  }
+    // アイテム取得API呼び出し
+    fetch(`${apiBaseUrl}/api/items`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("アイテムの取得に失敗しました")
+        return res.json()
+      })
+      .then(data => {
+        setItems(data)
+      })
+      .catch(err => {
+        alert(err.message)
+        router.replace("/login")
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }, [router, apiBaseUrl])
 
   const handleItemClick = (item) => {
     setSelectedItem(item)
@@ -40,6 +60,10 @@ export default function Dashboard() {
     setSelectedItem(null)
     setQuickRegisterMode(quickMode)
     setIsModalOpen(true)
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center min-h-screen">読み込み中...</div>
   }
 
   return (
@@ -63,6 +87,7 @@ export default function Dashboard() {
           />
 
           <ItemGrid
+            items={items}
             searchQuery={searchQuery}
             selectedCategory={selectedCategory}
             selectedLocation={selectedLocation}
@@ -74,7 +99,6 @@ export default function Dashboard() {
       {/* フローティング追加ボタン */}
       <div className="fixed bottom-6 right-6 z-50">
         <div className="flex flex-col gap-3">
-          {/* クイック登録ボタン */}
           <Button
             onClick={() => handleAddItem(true)}
             className="h-12 px-4 rounded-full bg-emerald-500 hover:bg-emerald-600 shadow-lg flex items-center gap-2"
@@ -83,7 +107,6 @@ export default function Dashboard() {
             <span className="hidden sm:inline">写真で登録</span>
           </Button>
 
-          {/* 通常登録ボタン */}
           <Button
             onClick={() => handleAddItem(false)}
             variant="outline"

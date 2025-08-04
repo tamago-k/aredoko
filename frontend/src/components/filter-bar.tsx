@@ -42,12 +42,12 @@ export function FilterBar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全カテゴリ</SelectItem>
-              <SelectItem value="electronics">電子機器</SelectItem>
-              <SelectItem value="books">書籍</SelectItem>
-              <SelectItem value="outdoor">アウトドア</SelectItem>
-              <SelectItem value="tools">工具</SelectItem>
-              <SelectItem value="kitchen">キッチン</SelectItem>
-              <SelectItem value="clothing">衣類</SelectItem>
+              <SelectItem value="1">電子機器</SelectItem>
+              <SelectItem value="2">書籍</SelectItem>
+              <SelectItem value="3">アウトドア</SelectItem>
+              <SelectItem value="4">工具</SelectItem>
+              <SelectItem value="5">キッチン</SelectItem>
+              <SelectItem value="5">衣類</SelectItem>
             </SelectContent>
           </Select>
 
@@ -57,11 +57,11 @@ export function FilterBar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全場所</SelectItem>
-              <SelectItem value="living">リビング</SelectItem>
-              <SelectItem value="kitchen">キッチン</SelectItem>
-              <SelectItem value="bedroom">寝室</SelectItem>
-              <SelectItem value="storage">収納</SelectItem>
-              <SelectItem value="garage">ガレージ</SelectItem>
+              <SelectItem value="1">リビング</SelectItem>
+              <SelectItem value="2">キッチン</SelectItem>
+              <SelectItem value="3">寝室</SelectItem>
+              <SelectItem value="4">収納</SelectItem>
+              <SelectItem value="5">ガレージ</SelectItem>
             </SelectContent>
           </Select>
 

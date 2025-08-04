@@ -5,81 +5,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-const mockItems = [
-  {
-    id: 1,
-    name: "MacBook Pro",
-    description: "13インチ MacBook Pro 2021年モデル",
-    image: "/placeholder.svg?height=120&width=120",
-    status: "in-use",
-    category: "electronics",
-    location: "living",
-    tags: ["仕事", "個人"],
-    owner: "田中太郎",
-    borrower: null,
-  },
-  {
-    id: 2,
-    name: "キャンプテント",
-    description: "4人用ファミリーテント",
-    image: "/placeholder.svg?height=120&width=120",
-    status: "borrowed",
-    category: "outdoor",
-    location: "garage",
-    tags: ["キャンプ", "家族"],
-    owner: "田中花子",
-    borrower: "田中次郎",
-  },
-  {
-    id: 3,
-    name: "料理本セット",
-    description: "和食・洋食・中華の基本料理本",
-    image: "/placeholder.svg?height=120&width=120",
-    status: "available",
-    category: "books",
-    location: "kitchen",
-    tags: ["料理", "参考書"],
-    owner: "共有",
-    borrower: null,
-  },
-  {
-    id: 4,
-    name: "電動ドリル",
-    description: "DIY用電動ドリルセット",
-    image: "/placeholder.svg?height=120&width=120",
-    status: "available",
-    category: "tools",
-    location: "garage",
-    tags: ["DIY", "工具"],
-    owner: "田中太郎",
-    borrower: null,
-  },
-  {
-    id: 5,
-    name: "ヨガマット",
-    description: "滑り止め付きヨガマット",
-    image: "/placeholder.svg?height=120&width=120",
-    status: "in-use",
-    category: "sports",
-    location: "bedroom",
-    tags: ["運動", "健康"],
-    owner: "田中花子",
-    borrower: null,
-  },
-  {
-    id: 6,
-    name: "コーヒーメーカー",
-    description: "全自動コーヒーメーカー",
-    image: "/placeholder.svg?height=120&width=120",
-    status: "available",
-    category: "kitchen",
-    location: "kitchen",
-    tags: ["コーヒー", "家電"],
-    owner: "共有",
-    borrower: null,
-  },
-]
-
 const statusColors = {
   available: "bg-emerald-100 text-emerald-800",
   "in-use": "bg-blue-100 text-blue-800",
@@ -102,15 +27,29 @@ const locationLabels = {
   garage: "ガレージ",
 }
 
+interface Item {
+  id: number
+  name: string
+  description: string
+  image?: string | null
+  status: "available" | "in-use" | "borrowed" | "discarded"
+  category: string
+  location: string
+  tags: string[]
+  owner: string
+  borrower?: string | null
+}
+
 interface ItemGridProps {
+  items: Item[]
   searchQuery: string
   selectedCategory: string
   selectedLocation: string
-  onItemClick: (item: any) => void
+  onItemClick: (item: Item) => void
 }
 
-export function ItemGrid({ searchQuery, selectedCategory, selectedLocation, onItemClick }: ItemGridProps) {
-  const filteredItems = mockItems.filter((item) => {
+export function ItemGrid({ items, searchQuery, selectedCategory, selectedLocation, onItemClick }: ItemGridProps) {
+  const filteredItems = items.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,37 +61,36 @@ export function ItemGrid({ searchQuery, selectedCategory, selectedLocation, onIt
     return matchesSearch && matchesCategory && matchesLocation
   })
 
+  const totalCount = items.length
+  const availableCount = items.filter(i => i.status === "available").length
+  const borrowedCount = items.filter(i => i.status === "borrowed").length
+  const inUseCount = items.filter(i => i.status === "in-use").length
+
   return (
     <div>
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{mockItems.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{totalCount}</div>
             <div className="text-sm text-gray-600">総アイテム数</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-emerald-600">
-              {mockItems.filter((item) => item.status === "available").length}
-            </div>
+            <div className="text-2xl font-bold text-emerald-600">{availableCount}</div>
             <div className="text-sm text-gray-600">利用可能</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">
-              {mockItems.filter((item) => item.status === "borrowed").length}
-            </div>
+            <div className="text-2xl font-bold text-orange-600">{borrowedCount}</div>
             <div className="text-sm text-gray-600">貸出中</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {mockItems.filter((item) => item.status === "in-use").length}
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{inUseCount}</div>
             <div className="text-sm text-gray-600">使用中</div>
           </CardContent>
         </Card>
@@ -233,12 +171,12 @@ export function ItemGrid({ searchQuery, selectedCategory, selectedLocation, onIt
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1">
-                    {item.tags.slice(0, 2).map((tag) => (
+                    {item.tags?.slice(0, 2).map((tag) => (
                       <Badge key={tag} variant="secondary" className="text-xs">
                         {tag}
                       </Badge>
                     ))}
-                    {item.tags.length > 2 && (
+                    {item.tags && item.tags.length > 2 && (
                       <Badge variant="secondary" className="text-xs">
                         +{item.tags.length - 2}
                       </Badge>

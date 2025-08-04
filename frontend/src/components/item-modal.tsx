@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Camera, QrCode, MapPin, User, Calendar } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -34,15 +34,117 @@ const locationLabels = {
   garage: "ガレージ",
 }
 
+interface Item {
+  id?: number
+  name: string
+  description: string
+  image?: string
+  status: keyof typeof statusLabels
+  category: string
+  location: keyof typeof locationLabels
+  tags: string[]
+  owner: string
+  borrower?: string | null
+}
+
 interface ItemModalProps {
   isOpen: boolean
   onClose: () => void
-  item?: any
+  item?: Item
   quickMode?: boolean
 }
 
 export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModalProps) {
   const [activeTab, setActiveTab] = useState("detail")
+
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [category, setCategory] = useState("")
+  const [location, setLocation] = useState<keyof typeof locationLabels>("living")
+  const [tags, setTags] = useState("")
+  const [borrower, setBorrower] = useState("")
+  const [dueDate, setDueDate] = useState("")
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+
+  useEffect(() => {
+    if (item) {
+      setName(item.name)
+      setDescription(item.description)
+      setCategory(item.category)
+      setLocation(item.location)
+      setTags(item.tags ? item.tags.join(", ") : "")
+      setBorrower(item.borrower || "")
+      setDueDate("")
+      setActiveTab("detail")
+    } else {
+      // 新規モード時は空に
+      setName("")
+      setDescription("")
+      setCategory("")
+      setLocation("living")
+      setTags("")
+      setBorrower("")
+      setDueDate("")
+      setActiveTab("detail")
+    }
+  }, [item, isOpen])
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      alert("アイテム名は必須です")
+      return
+    }
+
+    const payload = {
+      name,
+      description,
+      category,
+      location,
+      tags: tagList,
+    }
+    const token = localStorage.getItem("token")
+    try {
+      if (item && item.id) {
+        // 更新(編集)
+        const res = await fetch(`${apiBaseUrl}/api/items/${item.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error("更新に失敗しました")
+      } else {
+        // 新規登録
+        const res = await fetch(`${apiBaseUrl}/api/items`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error("登録に失敗しました")
+      }
+
+      onClose()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "通信エラー")
+    }
+  }
+
+  const handleLend = () => {
+    // console.log("貸出開始", { borrower, dueDate })
+    onClose()
+  }
+
+  const handleReturn = () => {
+    // console.log("返却処理")
+    onClose()
+  }
+
+  const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean)
 
   // 新規登録モード
   if (!item) {
@@ -58,7 +160,7 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
               <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
                 <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-4">写真を撮影してアイテムを登録</p>
-                <Button className="bg-emerald-500 hover:bg-emerald-600">
+                <Button className="bg-emerald-500 hover:bg-emerald-600" onClick={() => alert("カメラ起動などの処理を実装してください")}>
                   <Camera className="h-4 w-4 mr-2" />
                   カメラを起動
                 </Button>
@@ -67,43 +169,43 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
 
             <div>
               <Label htmlFor="name">アイテム名 *</Label>
-              <Input id="name" placeholder="例: MacBook Pro" />
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="例: MacBook Pro" />
             </div>
 
             <div>
               <Label htmlFor="description">説明</Label>
-              <Textarea id="description" placeholder="アイテムの詳細説明" />
+              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="アイテムの詳細説明" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="category">カテゴリ</Label>
-                <Select>
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="electronics">電子機器</SelectItem>
-                    <SelectItem value="books">書籍</SelectItem>
-                    <SelectItem value="outdoor">アウトドア</SelectItem>
-                    <SelectItem value="tools">工具</SelectItem>
-                    <SelectItem value="kitchen">キッチン</SelectItem>
+                    <SelectItem value="1">電子機器</SelectItem>
+                    <SelectItem value="2">書籍</SelectItem>
+                    <SelectItem value="3">アウトドア</SelectItem>
+                    <SelectItem value="4">工具</SelectItem>
+                    <SelectItem value="5">キッチン</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label htmlFor="location">保管場所</Label>
-                <Select>
+                <Select value={location} onValueChange={(v) => setLocation(v as keyof typeof locationLabels)}>
                   <SelectTrigger>
                     <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="living">リビング</SelectItem>
-                    <SelectItem value="kitchen">キッチン</SelectItem>
-                    <SelectItem value="bedroom">寝室</SelectItem>
-                    <SelectItem value="storage">収納</SelectItem>
-                    <SelectItem value="garage">ガレージ</SelectItem>
+                    <SelectItem value="1">リビング</SelectItem>
+                    <SelectItem value="2">キッチン</SelectItem>
+                    <SelectItem value="3">寝室</SelectItem>
+                    <SelectItem value="4">収納</SelectItem>
+                    <SelectItem value="5">ガレージ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -111,16 +213,16 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
 
             <div>
               <Label htmlFor="tags">タグ</Label>
-              <Input id="tags" placeholder="例: 仕事, 個人 (カンマ区切り)" />
+              <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="例: 仕事, 個人 (カンマ区切り)" />
             </div>
 
             {!quickMode && (
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 bg-transparent">
+                <Button variant="outline" className="flex-1 bg-transparent" onClick={() => alert("写真アップロード処理を実装してください")}>
                   <Camera className="h-4 w-4 mr-2" />
                   写真
                 </Button>
-                <Button variant="outline" className="flex-1 bg-transparent">
+                <Button variant="outline" className="flex-1 bg-transparent" onClick={() => alert("QRコード読み取り処理を実装してください")}>
                   <QrCode className="h-4 w-4 mr-2" />
                   QRコード
                 </Button>
@@ -131,7 +233,16 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
               <Button variant="outline" className="flex-1 bg-transparent" onClick={onClose}>
                 キャンセル
               </Button>
-              <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600" onClick={onClose}>
+              <Button
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                onClick={() => {
+                  if (!name.trim()) {
+                    alert("アイテム名は必須です")
+                    return
+                  }
+                  handleSave()
+                }}
+              >
                 登録
               </Button>
             </div>
@@ -207,7 +318,7 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
             <div>
               <h4 className="font-medium text-gray-900 mb-2">タグ</h4>
               <div className="flex flex-wrap gap-1">
-                {item.tags.map((tag) => (
+                {item.tags?.map((tag) => (
                   <Badge key={tag} variant="secondary">
                     {tag}
                   </Badge>
@@ -220,43 +331,43 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
           <TabsContent value="edit" className="space-y-4">
             <div>
               <Label htmlFor="edit-name">アイテム名</Label>
-              <Input id="edit-name" defaultValue={item.name} />
+              <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
 
             <div>
               <Label htmlFor="edit-description">説明</Label>
-              <Textarea id="edit-description" defaultValue={item.description} />
+              <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="edit-category">カテゴリ</Label>
-                <Select defaultValue={item.category}>
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="electronics">電子機器</SelectItem>
-                    <SelectItem value="books">書籍</SelectItem>
-                    <SelectItem value="outdoor">アウトドア</SelectItem>
-                    <SelectItem value="tools">工具</SelectItem>
-                    <SelectItem value="kitchen">キッチン</SelectItem>
+                    <SelectItem value="1">電子機器</SelectItem>
+                    <SelectItem value="2">書籍</SelectItem>
+                    <SelectItem value="3">アウトドア</SelectItem>
+                    <SelectItem value="4">工具</SelectItem>
+                    <SelectItem value="5">キッチン</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label htmlFor="edit-location">保管場所</Label>
-                <Select defaultValue={item.location}>
+                <Select value={location} onValueChange={(v) => setLocation(v as keyof typeof locationLabels)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="living">リビング</SelectItem>
-                    <SelectItem value="kitchen">キッチン</SelectItem>
-                    <SelectItem value="bedroom">寝室</SelectItem>
-                    <SelectItem value="storage">収納</SelectItem>
-                    <SelectItem value="garage">ガレージ</SelectItem>
+                    <SelectItem value="1">リビング</SelectItem>
+                    <SelectItem value="2">キッチン</SelectItem>
+                    <SelectItem value="3">寝室</SelectItem>
+                    <SelectItem value="4">収納</SelectItem>
+                    <SelectItem value="5">ガレージ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -264,14 +375,25 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
 
             <div>
               <Label htmlFor="edit-tags">タグ</Label>
-              <Input id="edit-tags" defaultValue={item.tags.join(", ")} />
+              <Input id="edit-tags" value={tags} onChange={(e) => setTags(e.target.value)} />
             </div>
 
             <div className="flex gap-2 pt-4">
               <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setActiveTab("detail")}>
                 キャンセル
               </Button>
-              <Button className="flex-1 bg-emerald-500 hover:bg-emerald-600">保存</Button>
+              <Button
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                onClick={() => {
+                  if (!name.trim()) {
+                    alert("アイテム名は必須です")
+                    return
+                  }
+                  handleSave()
+                }}
+              >
+                保存
+              </Button>
             </div>
           </TabsContent>
 
@@ -299,13 +421,15 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
                     <span>貸出日: 2024-02-10</span>
                   </div>
                 </div>
-                <Button className="w-full bg-emerald-500 hover:bg-emerald-600">返却処理</Button>
+                <Button className="w-full bg-emerald-500 hover:bg-emerald-600" onClick={handleReturn}>
+                  返却処理
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="borrower">借用者</Label>
-                  <Select>
+                  <Select value={borrower} onValueChange={setBorrower}>
                     <SelectTrigger>
                       <SelectValue placeholder="借用者を選択" />
                     </SelectTrigger>
@@ -318,9 +442,25 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
                 </div>
                 <div>
                   <Label htmlFor="due-date">返却予定日</Label>
-                  <Input id="due-date" type="date" />
+                  <Input
+                    id="due-date"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
                 </div>
-                <Button className="w-full bg-emerald-500 hover:bg-emerald-600">貸出開始</Button>
+                <Button
+                  className="w-full bg-emerald-500 hover:bg-emerald-600"
+                  onClick={() => {
+                    if (!borrower) {
+                      alert("借用者を選択してください")
+                      return
+                    }
+                    handleLend()
+                  }}
+                >
+                  貸出開始
+                </Button>
               </div>
             )}
 
