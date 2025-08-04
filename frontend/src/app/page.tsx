@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { ItemGrid } from "@/components/item-grid"
@@ -16,6 +17,19 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedLocation, setSelectedLocation] = useState("all")
   const [quickRegisterMode, setQuickRegisterMode] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      router.replace("/login")
+    }
+  }, [router])
+
+  if (isLoading) {
+    return null
+  }
 
   const handleItemClick = (item) => {
     setSelectedItem(item)
