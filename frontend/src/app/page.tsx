@@ -9,8 +9,10 @@ import { ItemModal } from "@/components/item-modal"
 import { FilterBar } from "@/components/filter-bar"
 import { Button } from "@/components/ui/button"
 import { Plus, Camera } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default function Dashboard() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -68,9 +70,17 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Sidebar />
-      <div className="lg:pl-64">
-        <Header />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+
+      <div
+        className={cn(
+          "transition-all duration-300",
+          "lg:pl-16", // デフォルトは閉じた状態
+          !sidebarCollapsed && "lg:pl-64", // 開いた時は64
+        )}
+      >
+        <Header sidebarCollapsed={sidebarCollapsed} onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+
         <main className="p-4 lg:p-6">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-slate-800 mb-2">すべてのモノ</h1>
@@ -106,7 +116,6 @@ export default function Dashboard() {
             <Camera className="h-5 w-5" />
             <span className="hidden sm:inline">写真で登録</span>
           </Button>
-
           <Button
             onClick={() => handleAddItem(false)}
             variant="outline"

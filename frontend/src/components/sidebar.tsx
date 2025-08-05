@@ -1,28 +1,41 @@
 "use client"
-
-import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Home, Package, History, Tag, Bell, Users, Settings, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const navigation = [
-  { name: "ホーム", href: "#", icon: Home, current: false },
-  { name: "すべてのモノ", href: "#", icon: Package, current: true },
-  { name: "貸出履歴", href: "#", icon: History, current: false },
-  { name: "カテゴリ・タグ", href: "#", icon: Tag, current: false },
-  { name: "通知", href: "#", icon: Bell, current: false },
-  { name: "家族設定", href: "#", icon: Users, current: false },
-  { name: "設定", href: "#", icon: Settings, current: false },
+  { name: "ホーム", href: "/", icon: Home, key: "home" },
+  { name: "貸出履歴", href: "/borrows", icon: History, key: "borrows" },
+  { name: "カテゴリ・タグ", href: "/categories", icon: Tag, key: "categories" },
+  { name: "通知", href: "/notifications", icon: Bell, key: "notifications" },
+  { name: "家族設定", href: "/family", icon: Users, key: "family" },
+  { name: "設定", href: "/settings", icon: Settings, key: "settings" },
 ]
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+interface SidebarProps {
+  currentPage?: string
+  collapsed: boolean
+  onToggle: () => void
+}
+
+// デスクトップ用サイドバー
+function DesktopSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  const pathname = usePathname()
+
+  const isActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/"
+    }
+    return pathname.startsWith(href)
+  }
 
   return (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300",
-        collapsed ? "w-16" : "w-64",
+        "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:bg-white lg:border-r lg:border-gray-200 lg:transition-all lg:duration-300",
+        collapsed ? "lg:w-16" : "lg:w-64",
       )}
     >
       <div className="flex h-full flex-col">
@@ -36,7 +49,7 @@ export function Sidebar() {
               <h1 className="text-lg font-bold text-gray-900">aredoko</h1>
             </div>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="h-8 w-8">
+          <Button variant="ghost" size="icon" onClick={onToggle} className="h-8 w-8">
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
@@ -45,18 +58,20 @@ export function Sidebar() {
         <nav className="flex-1 px-3 py-4">
           <ul className="space-y-1">
             {navigation.map((item) => (
-              <li key={item.name}>
-                <Button
-                  variant={item.current ? "default" : "ghost"}
-                  className={cn(
-                    "w-full justify-start",
-                    item.current && "bg-emerald-500 hover:bg-emerald-600",
-                    collapsed && "px-2",
-                  )}
-                >
-                  <item.icon className={cn("h-4 w-4", !collapsed && "mr-3")} />
-                  {!collapsed && <span>{item.name}</span>}
-                </Button>
+              <li key={item.key}>
+                <Link href={item.href}>
+                  <Button
+                    variant={isActive(item.href) ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start",
+                      isActive(item.href) && "bg-emerald-500 hover:bg-emerald-600",
+                      collapsed && "px-2",
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4", !collapsed && "mr-3")} />
+                    {!collapsed && <span>{item.name}</span>}
+                  </Button>
+                </Link>
               </li>
             ))}
           </ul>
@@ -64,4 +79,8 @@ export function Sidebar() {
       </div>
     </div>
   )
+}
+
+export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  return <DesktopSidebar collapsed={collapsed} onToggle={onToggle} />
 }
