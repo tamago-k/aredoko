@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedLocation, setSelectedLocation] = useState("all")
   const [quickRegisterMode, setQuickRegisterMode] = useState(false)
-  const [items, setItems] = useState([]) // ← 追加
+  const [items, setItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL

@@ -17,21 +17,23 @@ const statusColors = {
   "in-use": "bg-blue-100 text-blue-800",
   borrowed: "bg-orange-100 text-orange-800",
   discarded: "bg-gray-100 text-gray-800",
-}
+} as const
 
 const statusLabels = {
   available: "利用可能",
   "in-use": "使用中",
   borrowed: "貸出中",
   discarded: "廃棄済み",
+} as const
+
+interface Category {
+  id: string
+  name: string
 }
 
-const locationLabels = {
-  living: "リビング",
-  kitchen: "キッチン",
-  bedroom: "寝室",
-  storage: "収納",
-  garage: "ガレージ",
+interface Location {
+  id: string
+  name: string
 }
 
 interface Item {
@@ -41,7 +43,7 @@ interface Item {
   image?: string
   status: keyof typeof statusLabels
   category: string
-  location: keyof typeof locationLabels
+  location: string
   tags: string[]
   owner: string
   borrower?: string | null
@@ -60,11 +62,50 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("")
-  const [location, setLocation] = useState<keyof typeof locationLabels>("living")
+  const [location, setLocation] = useState("")
   const [tags, setTags] = useState("")
   const [borrower, setBorrower] = useState("")
   const [dueDate, setDueDate] = useState("")
+
+  const [categories, setCategories] = useState<Category[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
+
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+
+  // タグの配列化
+  const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean)
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/categories`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token") ?? ""}` },
+        })
+        if (!res.ok) throw new Error("カテゴリ取得失敗")
+        const data: Category[] = await res.json()
+        setCategories(data)
+      } catch (e) {
+        console.error(e)
+        alert("カテゴリの取得に失敗しました")
+      }
+    }
+    fetchCategories()
+
+    async function fetchLocations() {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/locations`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token") ?? ""}` },
+        })
+        if (!res.ok) throw new Error("ロケーション取得失敗")
+        const data: Location[] = await res.json()
+        setLocations(data)
+      } catch (e) {
+        console.error(e)
+        alert("ロケーション取得に失敗しました")
+      }
+    }
+    fetchLocations()
+  }, [apiBaseUrl])
 
   useEffect(() => {
     if (item) {
@@ -77,17 +118,16 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
       setDueDate("")
       setActiveTab("detail")
     } else {
-      // 新規モード時は空に
       setName("")
       setDescription("")
       setCategory("")
-      setLocation("living")
+      setLocation(locations.length > 0 ? locations[0].id : "")
       setTags("")
       setBorrower("")
       setDueDate("")
       setActiveTab("detail")
     }
-  }, [item, isOpen])
+  }, [item, isOpen, locations])
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -105,29 +145,26 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
     const token = localStorage.getItem("token")
     try {
       if (item && item.id) {
-        // 更新(編集)
         const res = await fetch(`${apiBaseUrl}/api/items/${item.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error("更新に失敗しました")
       } else {
-        // 新規登録
         const res = await fetch(`${apiBaseUrl}/api/items`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error("登録に失敗しました")
       }
-
       onClose()
     } catch (e) {
       alert(e instanceof Error ? e.message : "通信エラー")
@@ -135,16 +172,12 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
   }
 
   const handleLend = () => {
-    // console.log("貸出開始", { borrower, dueDate })
     onClose()
   }
 
   const handleReturn = () => {
-    // console.log("返却処理")
     onClose()
   }
-
-  const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean)
 
   // 新規登録モード
   if (!item) {
@@ -160,7 +193,10 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
               <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
                 <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-4">写真を撮影してアイテムを登録</p>
-                <Button className="bg-emerald-500 hover:bg-emerald-600" onClick={() => alert("カメラ起動などの処理を実装してください")}>
+                <Button
+                  className="bg-emerald-500 hover:bg-emerald-600"
+                  onClick={() => alert("カメラ起動などの処理を実装")}
+                >
                   <Camera className="h-4 w-4 mr-2" />
                   カメラを起動
                 </Button>
@@ -174,7 +210,12 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
 
             <div>
               <Label htmlFor="description">説明</Label>
-              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="アイテムの詳細説明" />
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="アイテムの詳細説明"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -185,27 +226,35 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
                     <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">電子機器</SelectItem>
-                    <SelectItem value="2">書籍</SelectItem>
-                    <SelectItem value="3">アウトドア</SelectItem>
-                    <SelectItem value="4">工具</SelectItem>
-                    <SelectItem value="5">キッチン</SelectItem>
+                    {categories.length > 0 ? (
+                      categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="loading">読み込み中...</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label htmlFor="location">保管場所</Label>
-                <Select value={location} onValueChange={(v) => setLocation(v as keyof typeof locationLabels)}>
+                <Select value={location} onValueChange={setLocation}>
                   <SelectTrigger>
                     <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">リビング</SelectItem>
-                    <SelectItem value="2">キッチン</SelectItem>
-                    <SelectItem value="3">寝室</SelectItem>
-                    <SelectItem value="4">収納</SelectItem>
-                    <SelectItem value="5">ガレージ</SelectItem>
+                    {locations.length > 0 ? (
+                      locations.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="loading">読み込み中...</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -213,7 +262,12 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
 
             <div>
               <Label htmlFor="tags">タグ</Label>
-              <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="例: 仕事, 個人 (カンマ区切り)" />
+              <Input
+                id="tags"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="例: 仕事, 個人 (カンマ区切り)"
+              />
             </div>
 
             {!quickMode && (
@@ -286,7 +340,7 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
                 <h4 className="font-medium text-gray-900 mb-1">保管場所</h4>
                 <div className="flex items-center text-gray-600">
                   <MapPin className="h-4 w-4 mr-1" />
-                  {locationLabels[item.location]}
+                  {locations.find((loc) => loc.id === item.location)?.name ?? "不明な場所"}
                 </div>
               </div>
             </div>
@@ -344,30 +398,38 @@ export function ItemModal({ isOpen, onClose, item, quickMode = false }: ItemModa
                 <Label htmlFor="edit-category">カテゴリ</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">電子機器</SelectItem>
-                    <SelectItem value="2">書籍</SelectItem>
-                    <SelectItem value="3">アウトドア</SelectItem>
-                    <SelectItem value="4">工具</SelectItem>
-                    <SelectItem value="5">キッチン</SelectItem>
+                    {categories.length > 0 ? (
+                      categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="loading">読み込み中...</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label htmlFor="edit-location">保管場所</Label>
-                <Select value={location} onValueChange={(v) => setLocation(v as keyof typeof locationLabels)}>
+                <Select value={location} onValueChange={setLocation}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">リビング</SelectItem>
-                    <SelectItem value="2">キッチン</SelectItem>
-                    <SelectItem value="3">寝室</SelectItem>
-                    <SelectItem value="4">収納</SelectItem>
-                    <SelectItem value="5">ガレージ</SelectItem>
+                    {locations.length > 0 ? (
+                      locations.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="loading">読み込み中...</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
